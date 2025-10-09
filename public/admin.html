@@ -486,6 +486,64 @@
             display: block;
         }
         
+        .separator {
+            margin: 40px 0;
+            border-top: 2px solid rgba(120,120,120,0.3);
+            position: relative;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.05);
+        }
+        
+        .separator::after {
+            content: '⚙️';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(145deg, #2a2a2a, #1f1f1f);
+            padding: 0 15px;
+            font-size: 1.5em;
+        }
+
+        /* Animation spinner pour le chargement */
+        .spinner {
+            border: 3px solid rgba(255, 107, 53, 0.3);
+            border-top: 3px solid #ff6b35;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Style pour les checkboxes */
+        input[type="checkbox"] {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Style pour les liens de résultat */
+        .gamma-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: linear-gradient(145deg, #4a9d5f, #3d8350);
+            border-radius: 8px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .gamma-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(74, 157, 95, 0.4);
+        }
+        
         @media (max-width: 768px) {
             h1 {
                 font-size: 1.8em;
@@ -502,6 +560,10 @@
             header {
                 flex-direction: column;
                 gap: 15px;
+            }
+
+            .charts-container {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -725,6 +787,91 @@
                 
                 <div class="export-section">
                     <button class="btn btn-success" onclick="exportAllCSV()">📊 Exporter en CSV</button>
+                </div>
+            </div>
+
+            <div class="separator"></div>
+
+            <div class="card">
+                <h2>✨ Génération de Rapports Gamma</h2>
+                
+                <div class="form-group">
+                    <label>🔍 Sélectionnez un Employé</label>
+                    <select id="gammaEmployeeSelect">
+                        <option value="">-- Choisir un employé --</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>📅 Période du Rapport</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <label style="font-size: 0.8em; color: #888;">Date de début</label>
+                            <input type="date" id="gammaStartDate">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.8em; color: #888;">Date de fin</label>
+                            <input type="date" id="gammaEndDate">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>📋 Options de Détail</label>
+                    <div style="background: linear-gradient(145deg, #1f1f1f, #2a2a2a); padding: 20px; border-radius: 10px; border: 1px solid rgba(120,120,120,0.3);">
+                        <label style="display: flex; align-items: center; margin-bottom: 10px; cursor: pointer;">
+                            <input type="checkbox" id="includeDetails" checked style="width: auto; margin-right: 10px;">
+                            <span style="color: #c0c0c0;">Inclure les détails granulaires (recommandé)</span>
+                        </label>
+                        <p style="color: #888; font-size: 0.85em; margin-top: 5px; margin-left: 30px;">
+                            Statistiques journalières, analyse par projet/tâche, métriques de productivité détaillées
+                        </p>
+                    </div>
+                </div>
+                
+                <button id="btnGenerateGammaReport" class="btn btn-primary" style="width: 100%; padding: 18px; font-size: 1.1em;">
+                    ✨ Générer le Rapport avec Gamma
+                </button>
+                
+                <div id="gammaProgress" style="display: none; margin-top: 20px;">
+                    <div style="background: linear-gradient(145deg, #2a2a2a, #1f1f1f); padding: 20px; border-radius: 10px; border: 1px solid rgba(120,120,120,0.3);">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                            <div class="spinner" style="width: 30px; height: 30px;"></div>
+                            <div>
+                                <div style="color: #ff6b35; font-weight: 600; font-size: 1.1em;">Génération en cours...</div>
+                                <div id="gammaProgressText" style="color: #a0a0a0; font-size: 0.9em; margin-top: 5px;">
+                                    Initialisation de la génération
+                                </div>
+                            </div>
+                        </div>
+                        <div style="background: linear-gradient(145deg, #1a1a1a, #252525); height: 8px; border-radius: 5px; overflow: hidden; border: 1px solid rgba(120,120,120,0.2);">
+                            <div id="gammaProgressBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #ff6b35, #e85d2a); transition: width 0.3s ease;"></div>
+                        </div>
+                        <p style="color: #888; font-size: 0.85em; margin-top: 15px; text-align: center;">
+                            ⏱️ Cette opération peut prendre 30-60 secondes
+                        </p>
+                    </div>
+                </div>
+                
+                <div id="gammaResult" style="display: none; margin-top: 20px;">
+                    <div style="background: linear-gradient(145deg, #2d5a3d, #244531); padding: 20px; border-radius: 10px; border: 1px solid rgba(125, 211, 160, 0.3);">
+                        <div style="color: #7dd3a0; font-weight: 600; font-size: 1.2em; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                            <span>✅</span>
+                            <span>Rapport généré avec succès !</span>
+                        </div>
+                        <div id="gammaLinks" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <!-- Les liens seront ajoutés dynamiquement -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="gammaError" style="display: none; margin-top: 20px;">
+                    <div style="background: linear-gradient(145deg, #5a2d2d, #4a2424); padding: 20px; border-radius: 10px; border: 1px solid rgba(240, 140, 125, 0.3);">
+                        <div style="color: #f08c7d; font-weight: 600; font-size: 1.1em; margin-bottom: 10px;">
+                            ❌ Erreur lors de la génération
+                        </div>
+                        <div id="gammaErrorText" style="color: #f08c7d; font-size: 0.9em;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1350,6 +1497,202 @@
                 alert('❌ Erreur lors de l\'export CSV');
             }
         }
+
+        // ============================================
+        // FONCTIONS GAMMA REPORTS
+        // ============================================
+
+        async function loadEmployeesForGamma() {
+            try {
+                const response = await fetch(`${API_URL}/admin/employees`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const employees = await response.json();
+                
+                const select = document.getElementById('gammaEmployeeSelect');
+                select.innerHTML = '<option value="">-- Choisir un employé --</option>';
+                
+                employees.forEach(emp => {
+                    const option = document.createElement('option');
+                    option.value = emp.id;
+                    option.textContent = `${emp.first_name} ${emp.last_name} - ${emp.position || 'N/A'}`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erreur chargement employés pour Gamma:', error);
+            }
+        }
+
+        // Fonction pour définir les dates par défaut (dernier mois)
+        function setDefaultDates() {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setMonth(startDate.getMonth() - 1);
+            
+            document.getElementById('gammaEndDate').valueAsDate = endDate;
+            document.getElementById('gammaStartDate').valueAsDate = startDate;
+        }
+
+        // Fonction principale de génération de rapport
+        async function generateGammaReport() {
+            const employeeId = document.getElementById('gammaEmployeeSelect').value;
+            const startDate = document.getElementById('gammaStartDate').value;
+            const endDate = document.getElementById('gammaEndDate').value;
+            const includeDetails = document.getElementById('includeDetails').checked;
+            
+            // Validation
+            if (!employeeId) {
+                alert('⚠️ Veuillez sélectionner un employé');
+                return;
+            }
+            
+            if (!startDate || !endDate) {
+                alert('⚠️ Veuillez sélectionner une période');
+                return;
+            }
+            
+            if (new Date(startDate) > new Date(endDate)) {
+                alert('⚠️ La date de début doit être antérieure à la date de fin');
+                return;
+            }
+            
+            // Réinitialiser l'interface
+            document.getElementById('gammaProgress').style.display = 'block';
+            document.getElementById('gammaResult').style.display = 'none';
+            document.getElementById('gammaError').style.display = 'none';
+            document.getElementById('btnGenerateGammaReport').disabled = true;
+            
+            updateProgress(10, 'Préparation des données...');
+            
+            try {
+                // Étape 1: Lancer la génération
+                updateProgress(30, 'Envoi de la requête à Gamma API...');
+                
+                const generateResponse = await fetch(`${API_URL}/admin/gamma/generate-report/${employeeId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        startDate,
+                        endDate,
+                        includeDetails
+                    })
+                });
+                
+                if (!generateResponse.ok) {
+                    const errorData = await generateResponse.json();
+                    throw new Error(errorData.message || errorData.error || 'Erreur lors de la génération');
+                }
+                
+                const { generationId } = await generateResponse.json();
+                
+                updateProgress(50, 'Génération lancée, traitement par Gamma en cours...');
+                console.log('🆔 Generation ID:', generationId);
+                
+                // Étape 2: Polling du statut
+                await pollGenerationStatus(generationId);
+                
+            } catch (error) {
+                console.error('❌ Erreur génération Gamma:', error);
+                showError(error.message);
+            } finally {
+                document.getElementById('btnGenerateGammaReport').disabled = false;
+            }
+        }
+
+        // Fonction de polling pour vérifier le statut
+        async function pollGenerationStatus(generationId, attempt = 0) {
+            const maxAttempts = 60; // 60 tentatives = 2 minutes max
+            const pollInterval = 2000; // 2 secondes entre chaque tentative
+            
+            if (attempt >= maxAttempts) {
+                throw new Error('Timeout: La génération a pris trop de temps');
+            }
+            
+            try {
+                const statusResponse = await fetch(`${API_URL}/admin/gamma/status/${generationId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!statusResponse.ok) {
+                    throw new Error('Erreur lors de la vérification du statut');
+                }
+                
+                const statusData = await statusResponse.json();
+                console.log('📊 Statut:', statusData.status, '- Tentative:', attempt + 1);
+                
+                const progress = 50 + (attempt / maxAttempts) * 40; // De 50% à 90%
+                updateProgress(progress, `Génération en cours... (${attempt + 1}/${maxAttempts})`);
+                
+                if (statusData.status === 'completed') {
+                    updateProgress(100, 'Rapport généré avec succès !');
+                    showSuccess(statusData);
+                } else if (statusData.status === 'failed') {
+                    throw new Error(statusData.error || 'La génération a échoué');
+                } else {
+                    // Statut en cours (pending, processing), continuer le polling
+                    await new Promise(resolve => setTimeout(resolve, pollInterval));
+                    await pollGenerationStatus(generationId, attempt + 1);
+                }
+                
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // Mettre à jour la barre de progression
+        function updateProgress(percentage, text) {
+            document.getElementById('gammaProgressBar').style.width = percentage + '%';
+            document.getElementById('gammaProgressText').textContent = text;
+        }
+
+        // Afficher le succès avec les liens
+        function showSuccess(data) {
+            document.getElementById('gammaProgress').style.display = 'none';
+            document.getElementById('gammaResult').style.display = 'block';
+            
+            const linksContainer = document.getElementById('gammaLinks');
+            linksContainer.innerHTML = '';
+            
+            // Lien vers le document Gamma
+            if (data.webUrl) {
+                const webLink = document.createElement('a');
+                webLink.href = data.webUrl;
+                webLink.target = '_blank';
+                webLink.className = 'gamma-link';
+                webLink.innerHTML = '🌐 Ouvrir dans Gamma';
+                linksContainer.appendChild(webLink);
+            }
+            
+            // Lien de téléchargement PDF si disponible
+            if (data.pdfUrl) {
+                const pdfLink = document.createElement('a');
+                pdfLink.href = data.pdfUrl;
+                pdfLink.target = '_blank';
+                pdfLink.className = 'gamma-link';
+                pdfLink.innerHTML = '📄 Télécharger PDF';
+                linksContainer.appendChild(pdfLink);
+            }
+            
+            // Lien de téléchargement PowerPoint si disponible
+            if (data.pptxUrl) {
+                const pptxLink = document.createElement('a');
+                pptxLink.href = data.pptxUrl;
+                pptxLink.target = '_blank';
+                pptxLink.className = 'gamma-link';
+                pptxLink.innerHTML = '📊 Télécharger PowerPoint';
+                linksContainer.appendChild(pptxLink);
+            }
+        }
+
+        // Afficher une erreur
+        function showError(message) {
+            document.getElementById('gammaProgress').style.display = 'none';
+            document.getElementById('gammaError').style.display = 'block';
+            document.getElementById('gammaErrorText').textContent = message;
+        }
         
         // ============================================
         // CHARGEMENT DES DONNÉES PAR ONGLET
@@ -1371,6 +1714,7 @@
                     break;
                 case 'reports':
                     await loadReports();
+                    await loadEmployeesForGamma();
                     break;
             }
         }
@@ -1383,8 +1727,12 @@
             const authenticated = await checkAuth();
             if (authenticated) {
                 await loadDashboard();
+                setDefaultDates();
             }
         });
+
+        // Event listener pour le bouton de génération Gamma
+        document.getElementById('btnGenerateGammaReport').addEventListener('click', generateGammaReport);
     </script>
 </body>
 </html>
