@@ -1283,11 +1283,11 @@ function formatEmployeeDataForGamma(employee, stats, activities, detailedData = 
 app.post('/api/admin/gamma/generate-report/:employeeId', authenticateToken, isAdmin, async (req, res) => {
     try {
         const employeeId = req.params.employeeId;
-        const { startDate, endDate, includeDetails } = req.body;
+        const { startDate, endDate } = req.body;
 
         console.log('🔍 Début génération rapport Gamma pour employé ID:', employeeId);
         console.log('📅 Période:', startDate, 'à', endDate);
-        console.log('📊 Détails inclus:', includeDetails);
+        console.log('📊 Génération du rapport détaillé systématique.');
 
         const employee = await new Promise((resolve, reject) => {
             db.get(
@@ -1380,207 +1380,203 @@ app.post('/api/admin/gamma/generate-report/:employeeId', authenticateToken, isAd
 
         console.log('📋 Activités récupérées:', activities.length, 'entrées');
 
-        let detailedData = null;
+        let detailedData = {};
 
-        // Si détails demandés, récupérer les données supplémentaires
-        if (includeDetails) {
-            detailedData = {};
+        // Stats journalières
+        detailedData.dailyStats = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT
+                    date,
+                    work_seconds,
+                    break_seconds,
+                    lunch_seconds,
+                    start_time,
+                    end_time,
+                    ROUND((work_seconds * 100.0) / NULLIF(work_seconds + break_seconds + lunch_seconds, 0), 2) as productivity_rate
+                 FROM work_sessions
+                 WHERE user_id = ? ${dateFilter}
+                 ORDER BY date DESC`,
+                [employeeId],
+                (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows || []);
+                }
+            );
+        });
 
-            // Stats journalières
-            detailedData.dailyStats = await new Promise((resolve, reject) => {
-                db.all(
-                    `SELECT
-                        date,
-                        work_seconds,
-                        break_seconds,
-                        lunch_seconds,
-                        start_time,
-                        end_time,
-                        ROUND((work_seconds * 100.0) / NULLIF(work_seconds + break_seconds + lunch_seconds, 0), 2) as productivity_rate
-                     FROM work_sessions
-                     WHERE user_id = ? ${dateFilter}
-                     ORDER BY date DESC`,
-                    [employeeId],
-                    (err, rows) => {
-                        if (err) reject(err);
-                        else resolve(rows || []);
+        // Métriques de productivité
+        const totalTime = stats.total_work_seconds + stats.total_break_seconds + stats.total_lunch_seconds;
+        const productivityRate = totalTime > 0 
+            ? (stats.total_work_seconds / totalTime * 100).toFixed(2) 
+            : 0;
+
+        detailedData.productivityMetrics = {
+            productivityRate: parseFloat(productivityRate),
+            avgDailyWorkHours: stats.total_days > 0 
+                ? (stats.total_work_seconds / 3600 / stats.total_days).toFixed(2) 
+                : 0,
+            consistencyScore: 0.75, // Valeur par défaut
+            workBreakRatio: (stats.total_break_seconds + stats.total_lunch_seconds) > 0
+                ? (stats.total_work_seconds / (stats.total_break_seconds + stats.total_lunch_seconds)).toFixed(2)
+                : 0,
+            activeWorkDays: stats.total_days,
+            totalActivities: activities.length,
+            avgActivitiesPerDay: stats.total_days > 0
+                ? (activities.length / stats.total_days).toFixed(2)
+                : 0
+        };
+
+        // Breakdown par projet
+        detailedData.projectBreakdown = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT
+                    p.id,
+                    p.name,
+                    p.description,
+                    p.client,
+                    COUNT(te.id) as session_count,
+                    SUM(te.duration_seconds) as total_seconds,
+                    AVG(te.duration_seconds) as avg_session_duration,
+                    MIN(te.date) as first_date,
+                    MAX(te.date) as last_date
+                 FROM projects p
+                 INNER JOIN time_entries te ON p.id = te.project_id AND te.user_id = ?
+                 WHERE 1=1 ${dateFilter.replace('date', 'te.date')}
+                 GROUP BY p.id
+                 ORDER BY total_seconds DESC`,
+                [employeeId],
+                (err, rows) => {
+                    if (err) reject(err);
+                    else {
+                        const enriched = rows.map(proj => ({
+                            ...proj,
+                            total_hours: (proj.total_seconds / 3600).toFixed(2),
+                            avg_hours_per_session: (proj.avg_session_duration / 3600).toFixed(2),
+                            percentage_of_time: stats.total_work_seconds > 0
+                                ? ((proj.total_seconds / stats.total_work_seconds) * 100).toFixed(2)
+                                : 0,
+                            days_active: proj.first_date && proj.last_date
+                                ? Math.ceil((new Date(proj.last_date) - new Date(proj.first_date)) / (1000 * 60 * 60 * 24)) + 1
+                                : 0
+                        }));
+                        resolve(enriched || []);
                     }
-                );
-            });
+                }
+            );
+        });
 
-            // Métriques de productivité
-            const totalTime = stats.total_work_seconds + stats.total_break_seconds + stats.total_lunch_seconds;
-            const productivityRate = totalTime > 0 
-                ? (stats.total_work_seconds / totalTime * 100).toFixed(2) 
-                : 0;
-
-            detailedData.productivityMetrics = {
-                productivityRate: parseFloat(productivityRate),
-                avgDailyWorkHours: stats.total_days > 0 
-                    ? (stats.total_work_seconds / 3600 / stats.total_days).toFixed(2) 
-                    : 0,
-                consistencyScore: 0.75, // Valeur par défaut
-                workBreakRatio: (stats.total_break_seconds + stats.total_lunch_seconds) > 0
-                    ? (stats.total_work_seconds / (stats.total_break_seconds + stats.total_lunch_seconds)).toFixed(2)
-                    : 0,
-                activeWorkDays: stats.total_days,
-                totalActivities: activities.length,
-                avgActivitiesPerDay: stats.total_days > 0
-                    ? (activities.length / stats.total_days).toFixed(2)
-                    : 0
-            };
-
-            // Breakdown par projet
-            detailedData.projectBreakdown = await new Promise((resolve, reject) => {
-                db.all(
-                    `SELECT
-                        p.id,
-                        p.name,
-                        p.description,
-                        p.client,
-                        COUNT(te.id) as session_count,
-                        SUM(te.duration_seconds) as total_seconds,
-                        AVG(te.duration_seconds) as avg_session_duration,
-                        MIN(te.date) as first_date,
-                        MAX(te.date) as last_date
-                     FROM projects p
-                     INNER JOIN time_entries te ON p.id = te.project_id AND te.user_id = ?
-                     WHERE 1=1 ${dateFilter.replace('date', 'te.date')}
-                     GROUP BY p.id
-                     ORDER BY total_seconds DESC`,
-                    [employeeId],
-                    (err, rows) => {
-                        if (err) reject(err);
-                        else {
-                            const enriched = rows.map(proj => ({
-                                ...proj,
-                                total_hours: (proj.total_seconds / 3600).toFixed(2),
-                                avg_hours_per_session: (proj.avg_session_duration / 3600).toFixed(2),
-                                percentage_of_time: stats.total_work_seconds > 0
-                                    ? ((proj.total_seconds / stats.total_work_seconds) * 100).toFixed(2)
-                                    : 0,
-                                days_active: proj.first_date && proj.last_date
-                                    ? Math.ceil((new Date(proj.last_date) - new Date(proj.first_date)) / (1000 * 60 * 60 * 24)) + 1
-                                    : 0
-                            }));
-                            resolve(enriched || []);
-                        }
+        // Breakdown par tâche
+        detailedData.taskBreakdown = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT
+                    t.id,
+                    t.name,
+                    t.description,
+                    COUNT(te.id) as session_count,
+                    SUM(te.duration_seconds) as total_seconds,
+                    AVG(te.duration_seconds) as avg_session_duration,
+                    MIN(te.date) as first_date,
+                    MAX(te.date) as last_date
+                 FROM tasks t
+                 INNER JOIN time_entries te ON t.id = te.task_id AND te.user_id = ?
+                 WHERE 1=1 ${dateFilter.replace('date', 'te.date')}
+                 GROUP BY t.id
+                 ORDER BY total_seconds DESC`,
+                [employeeId],
+                (err, rows) => {
+                    if (err) reject(err);
+                    else {
+                        const enriched = rows.map(task => ({
+                            ...task,
+                            total_hours: (task.total_seconds / 3600).toFixed(2),
+                            avg_hours_per_session: (task.avg_session_duration / 3600).toFixed(2),
+                            percentage_of_time: stats.total_work_seconds > 0
+                                ? ((task.total_seconds / stats.total_work_seconds) * 100).toFixed(2)
+                                : 0,
+                            days_active: task.first_date && task.last_date
+                                ? Math.ceil((new Date(task.last_date) - new Date(task.first_date)) / (1000 * 60 * 60 * 24)) + 1
+                                : 0
+                        }));
+                        resolve(enriched || []);
                     }
-                );
-            });
+                }
+            );
+        });
 
-            // Breakdown par tâche
-            detailedData.taskBreakdown = await new Promise((resolve, reject) => {
-                db.all(
-                    `SELECT
-                        t.id,
-                        t.name,
-                        t.description,
-                        COUNT(te.id) as session_count,
-                        SUM(te.duration_seconds) as total_seconds,
-                        AVG(te.duration_seconds) as avg_session_duration,
-                        MIN(te.date) as first_date,
-                        MAX(te.date) as last_date
-                     FROM tasks t
-                     INNER JOIN time_entries te ON t.id = te.task_id AND te.user_id = ?
-                     WHERE 1=1 ${dateFilter.replace('date', 'te.date')}
-                     GROUP BY t.id
-                     ORDER BY total_seconds DESC`,
-                    [employeeId],
-                    (err, rows) => {
-                        if (err) reject(err);
-                        else {
-                            const enriched = rows.map(task => ({
-                                ...task,
-                                total_hours: (task.total_seconds / 3600).toFixed(2),
-                                avg_hours_per_session: (task.avg_session_duration / 3600).toFixed(2),
-                                percentage_of_time: stats.total_work_seconds > 0
-                                    ? ((task.total_seconds / stats.total_work_seconds) * 100).toFixed(2)
-                                    : 0,
-                                days_active: task.first_date && task.last_date
-                                    ? Math.ceil((new Date(task.last_date) - new Date(task.first_date)) / (1000 * 60 * 60 * 24)) + 1
-                                    : 0
-                            }));
-                            resolve(enriched || []);
-                        }
+        // Analyse par jour de la semaine
+        detailedData.weekdayAnalysis = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT
+                    CASE cast(strftime('%w', date) as integer)
+                        WHEN 0 THEN 'Dimanche'
+                        WHEN 1 THEN 'Lundi'
+                        WHEN 2 THEN 'Mardi'
+                        WHEN 3 THEN 'Mercredi'
+                        WHEN 4 THEN 'Jeudi'
+                        WHEN 5 THEN 'Vendredi'
+                        WHEN 6 THEN 'Samedi'
+                    END as day_name,
+                    strftime('%w', date) as day_number,
+                    COUNT(*) as day_count,
+                    AVG(work_seconds) as avg_work_seconds,
+                    AVG(break_seconds + lunch_seconds) as avg_break_seconds,
+                    SUM(work_seconds) as total_work_seconds
+                 FROM work_sessions
+                 WHERE user_id = ? ${dateFilter}
+                 GROUP BY strftime('%w', date)
+                 ORDER BY day_number`,
+                [employeeId],
+                (err, rows) => {
+                    if (err) reject(err);
+                    else {
+                        const enriched = rows.map(day => ({
+                            ...day,
+                            avg_work_hours: (day.avg_work_seconds / 3600).toFixed(2),
+                            total_work_hours: (day.total_work_seconds / 3600).toFixed(2),
+                            productivity_score: day.avg_work_seconds > 0 && day.avg_break_seconds > 0
+                                ? ((day.avg_work_seconds / (day.avg_work_seconds + day.avg_break_seconds)) * 100).toFixed(2)
+                                : 0
+                        }));
+                        resolve(enriched || []);
                     }
-                );
-            });
+                }
+            );
+        });
 
-            // Analyse par jour de la semaine
-            detailedData.weekdayAnalysis = await new Promise((resolve, reject) => {
-                db.all(
-                    `SELECT
-                        CASE cast(strftime('%w', date) as integer)
-                            WHEN 0 THEN 'Dimanche'
-                            WHEN 1 THEN 'Lundi'
-                            WHEN 2 THEN 'Mardi'
-                            WHEN 3 THEN 'Mercredi'
-                            WHEN 4 THEN 'Jeudi'
-                            WHEN 5 THEN 'Vendredi'
-                            WHEN 6 THEN 'Samedi'
-                        END as day_name,
-                        strftime('%w', date) as day_number,
-                        COUNT(*) as day_count,
-                        AVG(work_seconds) as avg_work_seconds,
-                        AVG(break_seconds + lunch_seconds) as avg_break_seconds,
-                        SUM(work_seconds) as total_work_seconds
-                     FROM work_sessions
-                     WHERE user_id = ? ${dateFilter}
-                     GROUP BY strftime('%w', date)
-                     ORDER BY day_number`,
-                    [employeeId],
-                    (err, rows) => {
-                        if (err) reject(err);
-                        else {
-                            const enriched = rows.map(day => ({
-                                ...day,
-                                avg_work_hours: (day.avg_work_seconds / 3600).toFixed(2),
-                                total_work_hours: (day.total_work_seconds / 3600).toFixed(2),
-                                productivity_score: day.avg_work_seconds > 0 && day.avg_break_seconds > 0
-                                    ? ((day.avg_work_seconds / (day.avg_work_seconds + day.avg_break_seconds)) * 100).toFixed(2)
-                                    : 0
-                            }));
-                            resolve(enriched || []);
-                        }
-                    }
-                );
-            });
+        // Analyse horaire
+        const hourlyData = await new Promise((resolve, reject) => {
+            db.all(
+                `SELECT
+                    strftime('%H', start_time) as start_hour,
+                    strftime('%H', end_time) as end_hour
+                 FROM work_sessions
+                 WHERE user_id = ? ${dateFilter}
+                 AND start_time IS NOT NULL AND end_time IS NOT NULL`,
+                [employeeId],
+                (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows || []);
+                }
+            );
+        });
 
-            // Analyse horaire
-            const hourlyData = await new Promise((resolve, reject) => {
-                db.all(
-                    `SELECT
-                        strftime('%H', start_time) as start_hour,
-                        strftime('%H', end_time) as end_hour
-                     FROM work_sessions
-                     WHERE user_id = ? ${dateFilter}
-                     AND start_time IS NOT NULL AND end_time IS NOT NULL`,
-                    [employeeId],
-                    (err, rows) => {
-                        if (err) reject(err);
-                        else resolve(rows || []);
-                    }
-                );
-            });
+        const startHours = hourlyData.map(d => parseInt(d.start_hour)).filter(h => !isNaN(h));
+        const endHours = hourlyData.map(d => parseInt(d.end_hour)).filter(h => !isNaN(h));
 
-            const startHours = hourlyData.map(d => parseInt(d.start_hour)).filter(h => !isNaN(h));
-            const endHours = hourlyData.map(d => parseInt(d.end_hour)).filter(h => !isNaN(h));
+        detailedData.hourlyBreakdown = {
+            avgStartHour: startHours.length > 0 
+                ? (startHours.reduce((a, b) => a + b, 0) / startHours.length).toFixed(1)
+                : null,
+            avgEndHour: endHours.length > 0
+                ? (endHours.reduce((a, b) => a + b, 0) / endHours.length).toFixed(1)
+                : null,
+            earliestStart: startHours.length > 0 ? Math.min(...startHours) : null,
+            latestEnd: endHours.length > 0 ? Math.max(...endHours) : null,
+            avgSessionDuration: null
+        };
 
-            detailedData.hourlyBreakdown = {
-                avgStartHour: startHours.length > 0 
-                    ? (startHours.reduce((a, b) => a + b, 0) / startHours.length).toFixed(1)
-                    : null,
-                avgEndHour: endHours.length > 0
-                    ? (endHours.reduce((a, b) => a + b, 0) / endHours.length).toFixed(1)
-                    : null,
-                earliestStart: startHours.length > 0 ? Math.min(...startHours) : null,
-                latestEnd: endHours.length > 0 ? Math.max(...endHours) : null,
-                avgSessionDuration: null
-            };
-
-            console.log('📊 Données détaillées récupérées');
-        }
+        console.log('📊 Données détaillées récupérées');
+        
 
         const inputText = formatEmployeeDataForGamma(employee, stats, activities, detailedData);
         
