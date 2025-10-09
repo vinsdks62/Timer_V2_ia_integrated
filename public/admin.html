@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administration - Timer Journalier</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(100,100,100,0.03) 2px, rgba(100,100,100,0.03) 4px),
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(100,100,100,0.03) 2px, rgba(100,100,100,0.03) 4px);
+            pointer-events: none;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        
+        header {
+            background: linear-gradient(145deg, #2a2a2a, #1f1f1f);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 
+                0 10px 30px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+            border: 1px solid rgba(120,120,120,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-left h1 {
+            color: #c0c0c0;
+            font-size: 2.5em;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        
+        .admin-badge {
+            color: #ff6b35;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn-logout {
+            padding: 12px 25px;
+            background: linear-gradient(145deg, #dc2626, #991b1b);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        }
+        
+        .btn-logout:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(220, 38, 38, 0.4);
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+        
+        .tab {
+            padding: 15px 30px;
+            background: linear-gradient(145deg, #2a2a2a, #1f1f1f);
+            border: 1px solid rgba(120,120,120,0.2);
+            border-radius: 10px;
+            color: #a0a0a0;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+        
+        .tab:hover {
+            background: linear-gradient(145deg, #353535, #2a2a2a);
+            color: #c0c0c0;
+        }
+        
+        .tab.active {
+            background: linear-gradient(145deg, #ff6b35, #e85d2a);
+            color: white;
+            border-color: #ff6b35;
+            box-shadow: 0 0 15px rgba(255, 107, 53, 0.3);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .card {
+            background: linear-gradient(145deg, #2a2a2a, #1f1f1f);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 
+                0 5px 15px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+            border: 1px solid rgba(120,120,120,0.2);
+        }
+        
+        .card h2 {
+            color: #c0c0c0;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 2px solid rgba(255, 107, 53, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            color: #a0a0a0;
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9em;
+            letter-spacing: 1px;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(145deg, #1f1f1f, #2a2a2a);
+            border: 1px solid rgba(120,120,120,0.3);
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 1em;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.3);
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #ff6b35;
+            box-shadow: 
+                inset 0 2px 5px rgba(0,0,0,0.3),
+                0 0 0 2px rgba(255, 107, 53, 0.2);
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+            box-shadow: 
+                0 4px 10px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 6px 15px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(145deg, #ff6b35, #e85d2a);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(145deg, #4a9d5f, #3d8350);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(145deg, #dc2626, #991b1b);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(145deg, #6b7280, #4b5563);
+            color: white;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: linear-gradient(145deg, #3a3a3a, #2f2f2f);
+            color: #ff6b35;
+            padding: 15px;
+            text-align: left;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9em;
+            border: 1px solid rgba(120,120,120,0.2);
+        }
+        
+        td {
+            padding: 15px;
+            color: #d0d0d0;
+            border: 1px solid rgba(120,120,120,0.2);
+            background: linear-gradient(145deg, #252525, #1f1f1f);
+        }
+        
+        tr:hover td {
+            background: linear-gradient(145deg, #2f2f2f, #252525);
+        }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .actions button {
+            padding: 8px 15px;
+            font-size: 0.85em;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(145deg, #3a3a3a, #2f2f2f);
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid rgba(120,120,120,0.2);
+            box-shadow: 
+                0 5px 15px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+        
+        .stat-card h3 {
+            color: #a0a0a0;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            color: #ff6b35;
+            font-size: 2.5em;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
+        }
+        
+        .employee-card {
+            background: linear-gradient(145deg, #353535, #2a2a2a);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(120,120,120,0.2);
+        }
+        
+        .employee-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .employee-name {
+            color: #c0c0c0;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+        
+        .employee-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .employee-stat {
+            background: linear-gradient(145deg, #2a2a2a, #1f1f1f);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(120,120,120,0.2);
+        }
+        
+        .employee-stat-label {
+            color: #a0a0a0;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .employee-stat-value {
+            color: #ff6b35;
+            font-size: 1.3em;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .export-section {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .chart-box {
+            background: linear-gradient(145deg, #2a2a2a, #1f1f1f);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(120,120,120,0.2);
+            box-shadow: 
+                inset 0 2px 5px rgba(0,0,0,0.3),
+                0 1px 0 rgba(255,255,255,0.05);
+        }
+        
+        .chart-box h3 {
+            text-align: center;
+            color: #a0a0a0;
+            margin-bottom: 20px;
+            font-size: 1em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .bar-chart {
+            margin-top: 10px;
+        }
+        
+        .bar-item {
+            margin-bottom: 15px;
+        }
+        
+        .bar-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: #a0a0a0;
+        }
+        
+        .bar-track {
+            width: 100%;
+            height: 25px;
+            background: linear-gradient(145deg, #1a1a1a, #252525);
+            border-radius: 5px;
+            overflow: hidden;
+            border: 1px solid rgba(120,120,120,0.2);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.4);
+        }
+        
+        .bar-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            color: white;
+            font-size: 0.85em;
+            font-weight: 600;
+            box-shadow: 
+                0 0 10px rgba(255, 107, 53, 0.3),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        
+        .chart-legend {
+            margin-top: 15px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            box-shadow: 
+                0 2px 5px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        
+        .legend-label {
+            flex: 1;
+            font-size: 0.85em;
+            color: #a0a0a0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .legend-value {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: #ff6b35;
+            text-shadow: 0 0 5px rgba(255, 107, 53, 0.2);
+            font-size: 0.9em;
+        }
+        
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+            display: none;
+        }
+        
+        .message.success {
+            background: linear-gradient(145deg, #2d5a3d, #244531);
+            color: #7dd3a0;
+            border: 1px solid rgba(125, 211, 160, 0.3);
+        }
+        
+        .message.error {
+            background: linear-gradient(145deg, #5a2d2d, #4a2424);
+            color: #f08c7d;
+            border: 1px solid rgba(240, 140, 125, 0.3);
+        }
+        
+        .message.show {
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .tabs {
+                flex-wrap: nowrap;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            header {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1>⚙️ Administration</h1>
+                <div class="admin-badge" id="adminName">🔑 Panneau Administrateur</div>
+            </div>
+            <button class="btn-logout" id="btnLogout">🚪 Déconnexion</button>
+        </header>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="dashboard">📊 Tableau de bord</div>
+            <div class="tab" data-tab="employees">👥 Employés</div>
+            <div class="tab" data-tab="tasks">📋 Tâches</div>
+            <div class="tab" data-tab="projects">🚀 Projets</div>
+            <div class="tab" data-tab="reports">📄 Rapports</div>
+        </div>
+        
+        <!-- DASHBOARD -->
+        <div id="dashboard" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Employés</h3>
+                    <div class="stat-value" id="totalEmployees">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Tâches Actives</h3>
+                    <div class="stat-value" id="totalTasks">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Projets en Cours</h3>
+                    <div class="stat-value" id="totalProjects">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Heures Totales</h3>
+                    <div class="stat-value" id="totalHours">-</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>📊 Graphiques de Performance</h2>
+                <div class="charts-container" style="margin-bottom: 30px;">
+                    <div class="chart-box">
+                        <h3>Top 5 Employés (Heures)</h3>
+                        <div class="bar-chart" id="topEmployeesChart"></div>
+                    </div>
+                    <div class="chart-box">
+                        <h3>Répartition Projets/Tâches</h3>
+                        <div class="pie-chart" id="topProjectsPieChart" style="width: 220px; height: 220px; margin: 0 auto 20px auto; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.4), inset 0 0 20px rgba(0,0,0,0.3);"></div>
+                        <div class="chart-legend" id="topProjectsLegend"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>Activité Récente</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Employé</th>
+                                <th>Action</th>
+                                <th>Durée</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activityTable">
+                            <tr><td colspan="4" style="text-align: center;">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- EMPLOYEES -->
+        <div id="employees" class="tab-content">
+            <div id="employeeMessage" class="message"></div>
+            
+            <div class="card">
+                <h2>➕ Créer un Compte Employé</h2>
+                <form id="createEmployeeForm">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div class="form-group">
+                            <label>Nom</label>
+                            <input type="text" id="employeeLastName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Prénom</label>
+                            <input type="text" id="employeeFirstName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="employeeEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Mot de passe</label>
+                            <input type="password" id="employeePassword" required minlength="6">
+                        </div>
+                        <div class="form-group">
+                            <label>Poste</label>
+                            <input type="text" id="employeePosition" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success">✅ Créer le Compte</button>
+                </form>
+            </div>
+            
+            <div class="card">
+                <h2>👥 Liste des Employés</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nom Complet</th>
+                                <th>Email</th>
+                                <th>Poste</th>
+                                <th>Date d'Inscription</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employeesTable">
+                            <tr><td colspan="5" style="text-align: center;">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- TASKS -->
+        <div id="tasks" class="tab-content">
+            <div id="taskMessage" class="message"></div>
+            
+            <div class="card">
+                <h2>➕ Créer une Tâche</h2>
+                <form id="createTaskForm">
+                    <div class="form-group">
+                        <label>Nom de la Tâche</label>
+                        <input type="text" id="taskName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" id="taskDescription">
+                    </div>
+                    <button type="submit" class="btn btn-success">✅ Créer la Tâche</button>
+                </form>
+            </div>
+            
+            <div class="card">
+                <h2>📋 Liste des Tâches</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Description</th>
+                                <th>Date de Création</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasksTable">
+                            <tr><td colspan="4" style="text-align: center;">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PROJECTS -->
+        <div id="projects" class="tab-content">
+            <div id="projectMessage" class="message"></div>
+            
+            <div class="card">
+                <h2>➕ Créer un Projet</h2>
+                <form id="createProjectForm">
+                    <div class="form-group">
+                        <label>Nom du Projet</label>
+                        <input type="text" id="projectName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" id="projectDescription">
+                    </div>
+                    <div class="form-group">
+                        <label>Client</label>
+                        <input type="text" id="projectClient">
+                    </div>
+                    <button type="submit" class="btn btn-success">✅ Créer le Projet</button>
+                </form>
+            </div>
+            
+            <div class="card">
+                <h2>🚀 Liste des Projets</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Description</th>
+                                <th>Client</th>
+                                <th>Date de Création</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projectsTable">
+                            <tr><td colspan="5" style="text-align: center;">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- REPORTS -->
+        <div id="reports" class="tab-content">
+            <div class="card">
+                <h2>📊 Statistiques par Employé</h2>
+                <div id="employeeReports">Chargement...</div>
+                
+                <div class="export-section">
+                    <button class="btn btn-success" onclick="exportAllCSV()">📊 Exporter en CSV</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration API
+        const API_URL = 'http://localhost:3000/api';
+        let token = localStorage.getItem('token');
+        let currentUser = null;
+        
+        // ============================================
+        // AUTHENTIFICATION
+        // ============================================
+        
+        async function checkAuth() {
+            if (!token) {
+                window.location.href = '/login.html';
+                return false;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/auth/verify`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) {
+                    console.warn('⚠️ Vérification token échouée, nouvelle tentative dans 5s...');
+                    
+                    setTimeout(async () => {
+                        const retryResponse = await fetch(`${API_URL}/auth/verify`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        if (!retryResponse.ok) {
+                            console.error('❌ Token invalide après 2 tentatives');
+                            localStorage.removeItem('token');
+                            localStorage.removeItem('user');
+                            alert('⚠️ Votre session a expiré. Veuillez vous reconnecter.');
+                            window.location.href = '/login.html';
+                        }
+                    }, 5000);
+                    
+                    return true;
+                }
+                
+                currentUser = JSON.parse(localStorage.getItem('user'));
+                
+                // Vérifier que c'est bien un admin
+                if (currentUser.role !== 'admin') {
+                    alert('Accès refusé - Cette page est réservée aux administrateurs');
+                    window.location.href = '/index.html';
+                    return false;
+                }
+                
+                document.getElementById('adminName').textContent = `🔑 ${currentUser.first_name} ${currentUser.last_name}`;
+                
+                return true;
+            } catch (error) {
+                console.error('Erreur vérification auth:', error);
+                console.warn('⚠️ Erreur réseau, on continue avec le token existant');
+                return true;
+            }
+        }
+        
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login.html';
+            }
+        });
+        
+        // ============================================
+        // GESTION DES ONGLETS
+        // ============================================
+        
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(tc => tc.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+                
+                // Charger les données de l'onglet
+                loadTabData(tabName);
+            });
+        });
+        
+        // ============================================
+        // FONCTIONS UTILITAIRES
+        // ============================================
+        
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+        }
+        
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('fr-FR');
+        }
+        
+        function showMessage(elementId, message, type = 'success') {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.className = `message ${type} show`;
+            setTimeout(() => {
+                el.classList.remove('show');
+            }, 5000);
+        }
+        
+        // ============================================
+        // DASHBOARD
+        // ============================================
+        
+        async function loadDashboard() {
+            try {
+                // Stats globales
+                const statsResponse = await fetch(`${API_URL}/admin/stats/global`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const stats = await statsResponse.json();
+                
+                document.getElementById('totalEmployees').textContent = stats.total_employees || 0;
+                document.getElementById('totalTasks').textContent = stats.total_tasks || 0;
+                document.getElementById('totalProjects').textContent = stats.total_projects || 0;
+                document.getElementById('totalHours').textContent = formatTime(stats.total_work_seconds || 0);
+                
+                // Charger les graphiques
+                await loadTopEmployeesChart();
+                await loadTopProjectsChart();
+                
+                // Activité récente
+                const activityResponse = await fetch(`${API_URL}/admin/activity/recent`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const activities = await activityResponse.json();
+                
+                const activityHTML = activities.length > 0 ? activities.map(activity => `
+                    <tr>
+                        <td>${activity.employee_name}</td>
+                        <td>${activity.activity_name}</td>
+                        <td>${formatTime(activity.duration_seconds)}</td>
+                        <td>${formatDate(activity.date)}</td>
+                    </tr>
+                `).join('') : '<tr><td colspan="4" style="text-align: center;">Aucune activité récente</td></tr>';
+                
+                document.getElementById('activityTable').innerHTML = activityHTML;
+            } catch (error) {
+                console.error('Erreur chargement dashboard:', error);
+            }
+        }
+        
+        async function loadTopEmployeesChart() {
+            try {
+                const response = await fetch(`${API_URL}/admin/stats/employees`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const stats = await response.json();
+                
+                // Trier par temps de travail et prendre le top 5
+                const sorted = stats
+                    .sort((a, b) => (b.total_work_seconds || 0) - (a.total_work_seconds || 0))
+                    .slice(0, 5);
+                
+                if (sorted.length === 0) {
+                    document.getElementById('topEmployeesChart').innerHTML = '<p style="color: #9ca3af; text-align: center; padding: 20px;">Aucune donnée</p>';
+                    return;
+                }
+                
+                const maxSeconds = Math.max(...sorted.map(e => e.total_work_seconds || 0));
+                const colors = ['#ff6b35', '#d97706', '#2563eb', '#4a9d5f', '#dc2626'];
+                
+                const barsHTML = sorted.map((employee, index) => {
+                    const seconds = employee.total_work_seconds || 0;
+                    const percentage = maxSeconds > 0 ? (seconds / maxSeconds) * 100 : 0;
+                    const hours = (seconds / 3600).toFixed(1);
+                    
+                    return `
+                        <div class="bar-item">
+                            <div class="bar-label">
+                                <span>${employee.first_name} ${employee.last_name}</span>
+                                <span>${formatTime(seconds)}</span>
+                            </div>
+                            <div class="bar-track">
+                                <div class="bar-fill" style="width: ${percentage}%; background: ${colors[index]};">
+                                    ${hours}h
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                document.getElementById('topEmployeesChart').innerHTML = barsHTML;
+            } catch (error) {
+                console.error('Erreur chargement graphique employés:', error);
+            }
+        }
+        
+        async function loadTopProjectsChart() {
+            try {
+                // Récupérer toutes les entrées de temps via l'activité récente
+                const response = await fetch(`${API_URL}/admin/activity/recent`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) {
+                    document.getElementById('topProjectsPieChart').innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 220px; color: #f08c7d;">Erreur</div>';
+                    return;
+                }
+                
+                const entries = await response.json();
+                
+                if (entries.length === 0) {
+                    document.getElementById('topProjectsPieChart').innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 220px; color: #9ca3af;">Aucune donnée</div>';
+                    document.getElementById('topProjectsLegend').innerHTML = '';
+                    return;
+                }
+                
+                // Grouper par projet/tâche et sommer les durées
+                const grouped = {};
+                entries.forEach(entry => {
+                    const name = entry.activity_name;
+                    if (!grouped[name]) {
+                        grouped[name] = 0;
+                    }
+                    grouped[name] += entry.duration_seconds;
+                });
+                
+                // Convertir en tableau et trier
+                const sorted = Object.entries(grouped)
+                    .map(([name, seconds]) => ({ name, seconds }))
+                    .sort((a, b) => b.seconds - a.seconds)
+                    .slice(0, 5);
+                
+                if (sorted.length === 0) {
+                    document.getElementById('topProjectsPieChart').innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 220px; color: #9ca3af;">Aucune donnée</div>';
+                    document.getElementById('topProjectsLegend').innerHTML = '';
+                    return;
+                }
+                
+                // Calculer le total
+                const total = sorted.reduce((sum, item) => sum + item.seconds, 0);
+                
+                // Créer le graphique circulaire
+                const colors = ['#ff6b35', '#d97706', '#2563eb', '#4a9d5f', '#dc2626'];
+                let currentAngle = 0;
+                const gradientParts = [];
+                
+                sorted.forEach((item, index) => {
+                    const angle = (item.seconds / total) * 360;
+                    if (item.seconds > 0) {
+                        gradientParts.push(`${colors[index]} ${currentAngle}deg ${currentAngle + angle}deg`);
+                        currentAngle += angle;
+                    }
+                });
+                
+                const pieChart = document.getElementById('topProjectsPieChart');
+                pieChart.style.background = `conic-gradient(${gradientParts.join(', ')})`;
+                
+                // Créer la légende
+                const legendHTML = sorted.map((item, index) => {
+                    const percentage = ((item.seconds / total) * 100).toFixed(1);
+                    return `
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: ${colors[index]}"></div>
+                            <div class="legend-label" title="${item.name}">${item.name}</div>
+                            <div class="legend-value">${percentage}%</div>
+                        </div>
+                    `;
+                }).join('');
+                
+                document.getElementById('topProjectsLegend').innerHTML = legendHTML;
+                
+            } catch (error) {
+                console.error('Erreur chargement graphique projets:', error);
+                document.getElementById('topProjectsPieChart').innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 220px; color: #f08c7d;">Erreur</div>';
+            }
+        }
+        
+        // ============================================
+        // GESTION DES EMPLOYÉS
+        // ============================================
+        
+        async function loadEmployees() {
+            try {
+                const response = await fetch(`${API_URL}/admin/employees`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const employees = await response.json();
+                
+                const employeesHTML = employees.length > 0 ? employees.map(employee => `
+                    <tr data-id="${employee.id}">
+                        <td>${employee.first_name} ${employee.last_name}</td>
+                        <td>${employee.email}</td>
+                        <td>${employee.position || '-'}</td>
+                        <td>${formatDate(employee.created_at)}</td>
+                        <td class="actions">
+                            <button class="btn btn-danger btn-sm" onclick="deleteEmployee(${employee.id})">🗑️ Supprimer</button>
+                        </td>
+                    </tr>
+                `).join('') : '<tr><td colspan="5" style="text-align: center;">Aucun employé</td></tr>';
+                
+                document.getElementById('employeesTable').innerHTML = employeesHTML;
+            } catch (error) {
+                console.error('Erreur chargement employés:', error);
+            }
+        }
+        
+        document.getElementById('createEmployeeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                first_name: document.getElementById('employeeFirstName').value,
+                last_name: document.getElementById('employeeLastName').value,
+                email: document.getElementById('employeeEmail').value,
+                password: document.getElementById('employeePassword').value,
+                position: document.getElementById('employeePosition').value
+            };
+            
+            try {
+                const response = await fetch(`${API_URL}/admin/employees`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    showMessage('employeeMessage', '✅ Employé créé avec succès !', 'success');
+                    e.target.reset();
+                    await loadEmployees();
+                } else {
+                    const error = await response.json();
+                    showMessage('employeeMessage', `❌ ${error.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Erreur création employé:', error);
+                showMessage('employeeMessage', '❌ Erreur lors de la création', 'error');
+            }
+        });
+        
+        async function deleteEmployee(id) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cet employé ?')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/admin/employees/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    showMessage('employeeMessage', '✅ Employé supprimé avec succès !', 'success');
+                    await loadEmployees();
+                } else {
+                    showMessage('employeeMessage', '❌ Erreur lors de la suppression', 'error');
+                }
+            } catch (error) {
+                console.error('Erreur suppression employé:', error);
+                showMessage('employeeMessage', '❌ Erreur lors de la suppression', 'error');
+            }
+        }
+        
+        // ============================================
+        // GESTION DES TÂCHES
+        // ============================================
+        
+        async function loadTasks() {
+            try {
+                const response = await fetch(`${API_URL}/tasks`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const tasks = await response.json();
+                
+                const tasksHTML = tasks.length > 0 ? tasks.map(task => `
+                    <tr data-id="${task.id}">
+                        <td>${task.name}</td>
+                        <td>${task.description || '-'}</td>
+                        <td>${formatDate(task.created_at)}</td>
+                        <td class="actions">
+                            <button class="btn btn-danger btn-sm" onclick="deleteTask(${task.id})">🗑️ Supprimer</button>
+                        </td>
+                    </tr>
+                `).join('') : '<tr><td colspan="4" style="text-align: center;">Aucune tâche</td></tr>';
+                
+                document.getElementById('tasksTable').innerHTML = tasksHTML;
+            } catch (error) {
+                console.error('Erreur chargement tâches:', error);
+            }
+        }
+        
+        document.getElementById('createTaskForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                name: document.getElementById('taskName').value,
+                description: document.getElementById('taskDescription').value
+            };
+            
+            try {
+                const response = await fetch(`${API_URL}/admin/tasks`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    showMessage('taskMessage', '✅ Tâche créée avec succès !', 'success');
+                    e.target.reset();
+                    await loadTasks();
+                } else {
+                    showMessage('taskMessage', '❌ Erreur lors de la création', 'error');
+                }
+            } catch (error) {
+                console.error('Erreur création tâche:', error);
+                showMessage('taskMessage', '❌ Erreur lors de la création', 'error');
+            }
+        });
+        
+        async function deleteTask(id) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cette tâche ?')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/admin/tasks/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    showMessage('taskMessage', '✅ Tâche supprimée avec succès !', 'success');
+                    await loadTasks();
+                } else {
+                    showMessage('taskMessage', '❌ Erreur lors de la suppression', 'error');
+                }
+            } catch (error) {
+                console.error('Erreur suppression tâche:', error);
+                showMessage('taskMessage', '❌ Erreur lors de la suppression', 'error');
+            }
+        }
+        
+        // ============================================
+        // GESTION DES PROJETS
+        // ============================================
+        
+        async function loadProjects() {
+            try {
+                const response = await fetch(`${API_URL}/projects`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const projects = await response.json();
+                
+                const projectsHTML = projects.length > 0 ? projects.map(project => `
+                    <tr data-id="${project.id}">
+                        <td>${project.name}</td>
+                        <td>${project.description || '-'}</td>
+                        <td>${project.client || '-'}</td>
+                        <td>${formatDate(project.created_at)}</td>
+                        <td class="actions">
+                            <button class="btn btn-danger btn-sm" onclick="deleteProject(${project.id})">🗑️ Supprimer</button>
+                        </td>
+                    </tr>
+                `).join('') : '<tr><td colspan="5" style="text-align: center;">Aucun projet</td></tr>';
+                
+                document.getElementById('projectsTable').innerHTML = projectsHTML;
+            } catch (error) {
+                console.error('Erreur chargement projets:', error);
+            }
+        }
+        
+        document.getElementById('createProjectForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                name: document.getElementById('projectName').value,
+                description: document.getElementById('projectDescription').value,
+                client: document.getElementById('projectClient').value
+            };
+            
+            try {
+                const response = await fetch(`${API_URL}/admin/projects`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    showMessage('projectMessage', '✅ Projet créé avec succès !', 'success');
+                    e.target.reset();
+                    await loadProjects();
+                } else {
+                    showMessage('projectMessage', '❌ Erreur lors de la création', 'error');
+                }
+            } catch (error) {
+                console.error('Erreur création projet:', error);
+                showMessage('projectMessage', '❌ Erreur lors de la création', 'error');
+            }
+        });
+        
+        async function deleteProject(id) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce projet ?')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/admin/projects/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    showMessage('projectMessage', '✅ Projet supprimé avec succès !', 'success');
+                    await loadProjects();
+                } else {
+                    showMessage('projectMessage', '❌ Erreur lors de la suppression', 'error');
+                }
+            } catch (error) {
+                console.error('Erreur suppression projet:', error);
+                showMessage('projectMessage', '❌ Erreur lors de la suppression', 'error');
+            }
+        }
+        
+        // ============================================
+        // RAPPORTS
+        // ============================================
+        
+        async function loadReports() {
+            try {
+                const response = await fetch(`${API_URL}/admin/stats/employees`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const stats = await response.json();
+                
+                if (stats.length === 0) {
+                    document.getElementById('employeeReports').innerHTML = '<p style="color: #9ca3af; text-align: center; padding: 20px;">Aucune statistique disponible</p>';
+                    return;
+                }
+                
+                const reportsHTML = stats.map(employee => `
+                    <div class="employee-card">
+                        <div class="employee-header">
+                            <div class="employee-name">${employee.first_name} ${employee.last_name} - ${employee.position || 'N/A'}</div>
+                        </div>
+                        <div class="employee-stats">
+                            <div class="employee-stat">
+                                <div class="employee-stat-label">Heures Travaillées</div>
+                                <div class="employee-stat-value">${formatTime(employee.total_work_seconds || 0)}</div>
+                            </div>
+                            <div class="employee-stat">
+                                <div class="employee-stat-label">Pauses</div>
+                                <div class="employee-stat-value">${formatTime(employee.total_break_seconds || 0)}</div>
+                            </div>
+                            <div class="employee-stat">
+                                <div class="employee-stat-label">Projets</div>
+                                <div class="employee-stat-value">${employee.total_projects || 0}</div>
+                            </div>
+                            <div class="employee-stat">
+                                <div class="employee-stat-label">Tâches</div>
+                                <div class="employee-stat-value">${employee.total_tasks || 0}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                document.getElementById('employeeReports').innerHTML = reportsHTML;
+            } catch (error) {
+                console.error('Erreur chargement rapports:', error);
+                document.getElementById('employeeReports').innerHTML = '<p style="color: #f08c7d; text-align: center; padding: 20px;">Erreur de chargement</p>';
+            }
+        }
+        
+        // Export CSV
+        async function exportAllCSV() {
+            try {
+                const response = await fetch(`${API_URL}/admin/stats/employees`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const stats = await response.json();
+                
+                let csvContent = "data:text/csv;charset=utf-8,";
+                csvContent += "Prénom,Nom,Email,Poste,Heures Travaillées,Pauses,Déjeuner,Projets,Tâches\n";
+                
+                stats.forEach(employee => {
+                    const row = [
+                        employee.first_name,
+                        employee.last_name,
+                        employee.email,
+                        employee.position || '-',
+                        formatTime(employee.total_work_seconds || 0),
+                        formatTime(employee.total_break_seconds || 0),
+                        formatTime(employee.total_lunch_seconds || 0),
+                        employee.total_projects || 0,
+                        employee.total_tasks || 0
+                    ];
+                    csvContent += row.join(',') + "\n";
+                });
+                
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `statistiques_employes_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                alert('✅ Export CSV réussi !');
+            } catch (error) {
+                console.error('Erreur export CSV:', error);
+                alert('❌ Erreur lors de l\'export CSV');
+            }
+        }
+        
+        // ============================================
+        // CHARGEMENT DES DONNÉES PAR ONGLET
+        // ============================================
+        
+        async function loadTabData(tabName) {
+            switch(tabName) {
+                case 'dashboard':
+                    await loadDashboard();
+                    break;
+                case 'employees':
+                    await loadEmployees();
+                    break;
+                case 'tasks':
+                    await loadTasks();
+                    break;
+                case 'projects':
+                    await loadProjects();
+                    break;
+                case 'reports':
+                    await loadReports();
+                    break;
+            }
+        }
+        
+        // ============================================
+        // INITIALISATION
+        // ============================================
+        
+        window.addEventListener('load', async () => {
+            const authenticated = await checkAuth();
+            if (authenticated) {
+                await loadDashboard();
+            }
+        });
+    </script>
+</body>
+</html>
